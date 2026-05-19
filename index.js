@@ -1,34 +1,51 @@
-const express = require('express');
+onst express = require('express');
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-
-const SYSTEM_PROMPT = `Sen Max Beauty güzellik salonunun WhatsApp asistanısın. Türkçe, kısa ve samimi cevaplar ver. Max 3-4 cümle.
-
-Salon: Max Beauty, Bursa - Nilüfer Mah. Güzellik Sok. No:12
-Saat: Hft içi 09-19, Cmt 10-18, Pazar kapalı
-Tel: +90 532 000 00 00
-
-Fiyatlar: Saç Kesimi 250TL, Boya 500TL, Keratin 800TL, Manikür 150TL, Pedikür 200TL, Kalıcı Oje 180TL, Kaş 100TL, Kirpik Lifting 350TL, Cilt Bakımı 400TL, Gelin Makyajı 1200TL
-
-Boş randevular: Yarın 10:00, 14:30 - Perşembe 11:00, 15:00 - Cuma 09:30`;
-
+ 
+const SYSTEM_PROMPT = `Sen "Yücel Alınca Saç Tasarım" erkek kuaförünün WhatsApp asistanısın. Müşterilere Türkçe, samimi ve kısa cevaplar ver. Maksimum 3-4 cümle.
+ 
+Salon Bilgileri:
+- İsim: Yücel Alınca Saç Tasarım
+- Adres: Altınşehir, Ahmet Taner Kışlalı Blv., 16120 Nilüfer/Bursa
+- Telefon: 0532 689 78 03
+- Çalışma Saatleri: Pazartesi-Cumartesi 09:00-23:00 (Pazar kapalı)
+ 
+Hizmetler ve Fiyatlar:
+- Saç Kesimi: 900 TL
+- Sakal Kesimi: 400 TL
+- Saç + Sakal: 1300 TL
+- Saç + Sakal + Kaş Alım: 1600 TL
+- Saç + Sakal + Ağda: 1500 TL
+- Saç Renklendirme: 5000 TL
+ 
+Randevu Bilgisi:
+- Randevular sabah 09:00'dan gece 23:00'a kadar yarım saatlik aralıklarla alınabilir.
+- Müşteri randevu almak isterse şu linki ver: https://randevu.ac/yucelalincasactasarim
+- "Müsait saatler var mı?" diye sorulursa linki ver ve oradan kontrol etmelerini söyle.
+ 
+Kurallar:
+- Her zaman nazik ve samimi ol
+- Randevu için mutlaka linki yönlendir
+- Fiyat sorulduğunda net bilgi ver
+- Adres sorulduğunda Google Maps linki de ver: https://maps.google.com/?q=Altınşehir,+Ahmet+Taner+Kışlalı+Blv.,+16120+Nilüfer/Bursa`;
+ 
 const conversations = {};
-
-app.get('/', (req, res) => res.send('Max Beauty Bot aktif!'));
-
+ 
+app.get('/', (req, res) => res.send('Yücel Alınca Saç Tasarım - WhatsApp Bot aktif! ✂️'));
+ 
 app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
   try {
     const from = req.body.From;
     const userMessage = req.body.Body;
-    console.log('Mesaj geldi:', from, '-', userMessage);
+    console.log('Mesaj:', from, '-', userMessage);
     if (!from || !userMessage) return;
-
+ 
     if (!conversations[from]) conversations[from] = [];
     conversations[from].push({ role: 'user', content: userMessage });
     if (conversations[from].length > 20) conversations[from] = conversations[from].slice(-20);
-
+ 
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -43,30 +60,31 @@ app.post('/webhook', async (req, res) => {
         messages: conversations[from]
       })
     });
-
+ 
     const d = await r.json();
-    console.log('API status:', r.status, 'Yanit:', JSON.stringify(d).substring(0, 200));
-
-    let reply = 'Şu an teknik bir sorun var. Lütfen +90 532 000 00 00 numaramızı arayın.';
+    console.log('API:', r.status, JSON.stringify(d).substring(0, 200));
+ 
+    let reply = 'Şu an teknik bir sorun var. Lütfen 0532 689 78 03 numaramızı arayın.';
     if (d && d.content && d.content[0] && d.content[0].text) {
       reply = d.content[0].text;
     } else if (d && d.error) {
       console.log('API error:', d.error.type, d.error.message);
     }
-
+ 
     conversations[from].push({ role: 'assistant', content: reply });
-
+ 
     const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     await twilio.messages.create({
       from: process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886',
       to: from,
       body: reply
     });
-    console.log('Cevap gönderildi');
+    console.log('Cevap gönderildi:', reply.substring(0, 100));
   } catch (e) {
     console.error('Hata:', e.message);
   }
 });
-
+ 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Max Beauty Bot ' + PORT + ' portunda!'));
+app.listen(PORT, () => console.log('Yücel Alınca Bot ' + PORT + ' portunda!'));
+ 
